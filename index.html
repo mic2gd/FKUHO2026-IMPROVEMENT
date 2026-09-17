@@ -46,6 +46,13 @@
                 <small>100 soal &middot; 1 jam 30 menit &middot; masuk leaderboard</small>
               </span>
             </button>
+            <button type="button" class="mode-option" data-mode="prediksi">
+              <span class="mode-dot dot-ochre"></span>
+              <span class="mode-text">
+                <strong>Prediksi Ujian Remedial</strong>
+                <small>100 soal &middot; 1 jam 30 menit &middot; masuk leaderboard</small>
+              </span>
+            </button>
             <button type="button" class="mode-option" data-mode="flashcard">
               <span class="mode-dot dot-teal"></span>
               <span class="mode-text">
@@ -125,7 +132,7 @@
   <!-- ===================== SCREEN: RESULT & REVIEW ===================== -->
   <section id="screen-result" class="screen" hidden>
     <header class="simple-topbar">
-      <strong>Hasil Ujian</strong>
+      <strong id="result-title-tag">Hasil Ujian</strong>
       <div class="simple-topbar-actions">
         <button class="btn btn-ghost btn-small" id="btn-goto-leaderboard">Lihat Leaderboard</button>
         <button class="btn btn-secondary btn-small" id="btn-back-home-1">Selesai</button>
@@ -148,12 +155,15 @@
   <!-- ===================== SCREEN: LEADERBOARD ===================== -->
   <section id="screen-leaderboard" class="screen" hidden>
     <header class="simple-topbar">
-      <strong>Leaderboard &mdash; Simulasi Ujian Teori</strong>
+      <strong id="leaderboard-title-tag">Leaderboard</strong>
       <div class="simple-topbar-actions">
         <button class="btn btn-secondary btn-small" id="btn-back-home-2">Beranda</button>
       </div>
     </header>
     <main class="leaderboard-main">
+      <p class="field-label">Pilih mode</p>
+      <div class="flashcard-filters" id="lb-tabs"></div>
+
       <div class="personal-recap card" id="personal-recap">
         <p class="field-label">Rekap Kamu</p>
         <div id="personal-recap-body">Memuat data&hellip;</div>
@@ -175,6 +185,9 @@
       </div>
     </header>
     <main class="flashcard-main">
+      <p class="field-label">Sumber soal</p>
+      <div class="flashcard-filters" id="flashcard-source"></div>
+      <p class="field-label">Mata kuliah</p>
       <div class="flashcard-filters" id="flashcard-filters"></div>
 
       <div class="flashcard-stage">
@@ -213,6 +226,7 @@
 
 <script src="assets/firebase-config.js"></script>
 <script src="assets/questions.js"></script>
+<script src="assets/questions-prediksi.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
