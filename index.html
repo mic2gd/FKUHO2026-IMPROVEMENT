@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBT Remedial &mdash; Blok Dasar-Dasar Biomedis FK UHO</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===================== SCREEN: LOGIN ===================== -->
+  <section id="screen-login" class="screen screen-center">
+    <div class="login-card card">
+      <p class="eyebrow-plain">Blok Dasar-Dasar Biomedis &middot; FK UHO 2026</p>
+      <h1>CBT Remedial Ujian Teori</h1>
+      <p class="subtitle">Anatomi &middot; Biokimia &middot; Fisiologi &middot; Histologi</p>
+
+      <form id="form-login" class="login-form">
+        <label>
+          <span>Nama Lengkap</span>
+          <input type="text" id="input-nama" required autocomplete="name" placeholder="cth. Rhema Pasandaran">
+        </label>
+        <label>
+          <span>NIM</span>
+          <input type="text" id="input-nim" required autocomplete="off" placeholder="cth. K1A1 25 001">
+        </label>
+        <label>
+          <span>Kelas</span>
+          <input type="text" id="input-kelas" required autocomplete="off" placeholder="cth. A / B / C">
+        </label>
+
+        <div class="mode-picker">
+          <p class="field-label">Pilih mode belajar</p>
+          <div class="mode-options">
+            <button type="button" class="mode-option is-active" data-mode="exam">
+              <span class="mode-dot dot-red"></span>
+              <span class="mode-text">
+                <strong>Simulasi Ujian Teori</strong>
+                <small>100 soal &middot; 1 jam 30 menit &middot; masuk leaderboard</small>
+              </span>
+            </button>
+            <button type="button" class="mode-option" data-mode="flashcard">
+              <span class="mode-dot dot-teal"></span>
+              <span class="mode-text">
+                <strong>Flash Card</strong>
+                <small>Belajar santai, jawaban &amp; pembahasan langsung terlihat</small>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Mulai</button>
+      </form>
+      <p id="login-error" class="form-error" hidden></p>
+    </div>
+  </section>
+
+  <!-- ===================== SCREEN: EXAM ===================== -->
+  <section id="screen-exam" class="screen" hidden>
+    <header class="exam-topbar">
+      <div class="exam-identity">
+        <strong id="exam-nama-tag">&mdash;</strong>
+        <span id="exam-meta-tag">&mdash;</span>
+      </div>
+      <div class="exam-timer" id="exam-timer">01:30:00</div>
+      <div class="exam-topbar-actions">
+        <button class="btn btn-ghost btn-small" id="btn-open-navigator">Nomor Soal</button>
+        <button class="btn btn-danger btn-small" id="btn-submit-exam">Kumpulkan</button>
+      </div>
+    </header>
+
+    <main class="exam-main">
+      <div class="question-card card">
+        <div class="question-head">
+          <span class="subject-tag" id="q-subject-tag">Anatomi</span>
+          <span class="question-number">Soal <span id="q-number">1</span> / 100</span>
+        </div>
+        <p class="question-text" id="q-text">Memuat soal&hellip;</p>
+        <div class="options-list" id="q-options"></div>
+      </div>
+
+      <div class="exam-nav">
+        <button class="btn btn-secondary" id="btn-prev">Sebelumnya</button>
+        <div class="exam-progress" id="exam-progress-text">0 / 100 terjawab</div>
+        <button class="btn btn-secondary" id="btn-next">Selanjutnya</button>
+      </div>
+    </main>
+  </section>
+
+  <!-- Navigator overlay (nomor soal) -->
+  <div id="navigator-overlay" class="overlay" hidden>
+    <div class="overlay-panel card">
+      <div class="overlay-head">
+        <h2>Navigasi Nomor Soal</h2>
+        <button class="btn-close" id="btn-close-navigator" aria-label="Tutup">&times;</button>
+      </div>
+      <div class="navigator-legend">
+        <span><i class="legend-dot legend-answered"></i> Terjawab</span>
+        <span><i class="legend-dot legend-unanswered"></i> Belum</span>
+        <span><i class="legend-dot legend-current"></i> Sedang dibuka</span>
+      </div>
+      <div class="navigator-grid" id="navigator-grid"></div>
+    </div>
+  </div>
+
+  <!-- Confirm submit overlay -->
+  <div id="confirm-overlay" class="overlay" hidden>
+    <div class="overlay-panel card overlay-panel-narrow">
+      <h2>Kumpulkan jawaban?</h2>
+      <p id="confirm-text">Kamu sudah menjawab <strong id="confirm-answered">0</strong> dari 100 soal. Jawaban tidak dapat diubah setelah dikumpulkan.</p>
+      <div class="overlay-actions">
+        <button class="btn btn-ghost" id="btn-cancel-submit">Kembali</button>
+        <button class="btn btn-danger" id="btn-confirm-submit">Ya, Kumpulkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN: RESULT & REVIEW ===================== -->
+  <section id="screen-result" class="screen" hidden>
+    <header class="simple-topbar">
+      <strong>Hasil Ujian</strong>
+      <div class="simple-topbar-actions">
+        <button class="btn btn-ghost btn-small" id="btn-goto-leaderboard">Lihat Leaderboard</button>
+        <button class="btn btn-secondary btn-small" id="btn-back-home-1">Selesai</button>
+      </div>
+    </header>
+    <main class="result-main">
+      <div class="score-summary card">
+        <div class="score-big" id="score-big">0</div>
+        <div class="score-meta">
+          <p><strong id="score-benar">0</strong> benar &middot; <strong id="score-salah">0</strong> salah dari 100 soal</p>
+          <p class="score-time">Waktu pengerjaan: <span id="score-durasi">-</span></p>
+        </div>
+      </div>
+
+      <h2 class="review-heading">Pembahasan Tiap Soal</h2>
+      <div id="review-list" class="review-list"></div>
+    </main>
+  </section>
+
+  <!-- ===================== SCREEN: LEADERBOARD ===================== -->
+  <section id="screen-leaderboard" class="screen" hidden>
+    <header class="simple-topbar">
+      <strong>Leaderboard &mdash; Simulasi Ujian Teori</strong>
+      <div class="simple-topbar-actions">
+        <button class="btn btn-secondary btn-small" id="btn-back-home-2">Beranda</button>
+      </div>
+    </header>
+    <main class="leaderboard-main">
+      <div class="personal-recap card" id="personal-recap">
+        <p class="field-label">Rekap Kamu</p>
+        <div id="personal-recap-body">Memuat data&hellip;</div>
+      </div>
+
+      <div class="leaderboard-card card">
+        <p class="field-label">Top 20 Nilai Tertinggi</p>
+        <div id="leaderboard-list">Memuat leaderboard&hellip;</div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ===================== SCREEN: FLASHCARD ===================== -->
+  <section id="screen-flashcard" class="screen" hidden>
+    <header class="simple-topbar">
+      <strong>Flash Card &mdash; Dasar-Dasar Biomedis</strong>
+      <div class="simple-topbar-actions">
+        <button class="btn btn-secondary btn-small" id="btn-back-home-3">Beranda</button>
+      </div>
+    </header>
+    <main class="flashcard-main">
+      <div class="flashcard-filters" id="flashcard-filters"></div>
+
+      <div class="flashcard-stage">
+        <div class="flashcard" id="flashcard" tabindex="0">
+          <div class="flashcard-inner" id="flashcard-inner">
+            <div class="flashcard-face flashcard-front">
+              <span class="subject-tag" id="fc-subject-tag">Anatomi</span>
+              <p id="fc-question">Memuat soal&hellip;</p>
+              <div id="fc-options" class="fc-options-list"></div>
+              <small class="flip-hint">Klik kartu atau tekan Spasi untuk membuka jawaban</small>
+            </div>
+            <div class="flashcard-face flashcard-back">
+              <p class="fc-answer-label">Jawaban Benar</p>
+              <p id="fc-answer" class="fc-answer-text">&mdash;</p>
+              <p class="fc-answer-label">Kenapa jawaban lain salah?</p>
+              <div id="fc-explanations" class="fc-explanations"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flashcard-controls">
+          <button class="btn btn-secondary" id="fc-prev">&lsaquo; Sebelumnya</button>
+          <span class="flashcard-count"><span id="fc-index">1</span> / <span id="fc-total">100</span></span>
+          <button class="btn btn-secondary" id="fc-next">Selanjutnya &rsaquo;</button>
+        </div>
+        <button class="btn btn-ghost" id="fc-shuffle">Acak Urutan</button>
+      </div>
+    </main>
+  </section>
+
+</div>
+
+<!-- Firebase (compat build, tanpa proses build) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script src="assets/firebase-config.js"></script>
+<script src="assets/questions.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
