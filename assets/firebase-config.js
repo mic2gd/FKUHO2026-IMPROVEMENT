@@ -10,12 +10,12 @@
 // =====================================================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAplU8C6N21iTn0BwLNJ-uErlHhxTX97sE",
-  authDomain: "ujian-ddb-fk26.firebaseapp.com",
-  projectId: "ujian-ddb-fk26",
-  storageBucket: "ujian-ddb-fk26.firebasestorage.app",
-  messagingSenderId: "63282114589",
-  appId: "1:63282114589:web:39f44ccdaa564d203616f4"
+  apiKey: "GANTI_DENGAN_API_KEY_KAMU",
+  authDomain: "GANTI_DENGAN_PROJECT_ID.firebaseapp.com",
+  projectId: "GANTI_DENGAN_PROJECT_ID",
+  storageBucket: "GANTI_DENGAN_PROJECT_ID.appspot.com",
+  messagingSenderId: "GANTI_DENGAN_SENDER_ID",
+  appId: "GANTI_DENGAN_APP_ID"
 };
 
 // Inisialisasi Firebase + Firestore, dipakai oleh assets/app.js.

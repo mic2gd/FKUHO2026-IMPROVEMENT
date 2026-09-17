@@ -6,15 +6,34 @@
 (function () {
   "use strict";
 
-  const QUESTIONS = window.QUESTIONS || [];
   const LETTERS = ["A", "B", "C", "D", "E"];
   const EXAM_DURATION_SEC = 90 * 60; // 1 jam 30 menit
   const SUBJECTS = ["Anatomi", "Biokimia", "Fisiologi", "Histologi"];
+
+  // Dua mode ujian bertimer (Simulasi Ujian Teori & Prediksi Ujian
+  // Remedial) berbagi seluruh logic yang sama di bawah - yang berbeda
+  // hanya bank soal & koleksi Firestore-nya, dikonfigurasi di sini.
+  const EXAM_MODES = {
+    exam: {
+      id: "exam",
+      label: "Simulasi Ujian Teori",
+      collection: "attempts",
+      getBank: function () { return window.QUESTIONS || []; }
+    },
+    prediksi: {
+      id: "prediksi",
+      label: "Prediksi Ujian Remedial",
+      collection: "attempts_prediksi",
+      getBank: function () { return window.QUESTIONS_PREDIKSI || []; }
+    }
+  };
 
   const APP = {
     user: null,
     mode: "exam",
     exam: {
+      modeId: "exam",
+      bank: [],
       order: [],
       index: 0,
       answers: {},
@@ -23,7 +42,11 @@
       submitted: false,
       resultSummary: null
     },
+    leaderboard: {
+      modeId: "exam"
+    },
     flashcard: {
+      bankId: "exam",
       order: [],
       index: 0,
       filter: "Semua"
@@ -81,6 +104,7 @@
     const modeButtons = $all(".mode-option");
     modeButtons.forEach(function (btn) {
       btn.addEventListener("click", function () {
+        if (btn.disabled) return;
         modeButtons.forEach(function (b) { b.classList.remove("is-active"); });
         btn.classList.add("is-active");
         APP.mode = btn.getAttribute("data-mode");
@@ -102,8 +126,8 @@
       errorEl.hidden = true;
       APP.user = { nama: nama, nim: nim, kelas: kelas };
 
-      if (APP.mode === "exam") {
-        startExam();
+      if (EXAM_MODES[APP.mode]) {
+        startExam(APP.mode);
       } else {
         startFlashcard();
       }
@@ -111,13 +135,14 @@
   }
 
   // ===========================================================
-  // EXAM MODE
+  // EXAM MODE (dipakai bersama oleh "Simulasi Ujian Teori" &
+  // "Prediksi Ujian Remedial" - dibedakan lewat APP.exam.modeId)
   // ===========================================================
-  function buildExamOrder() {
+  function buildExamOrder(bank) {
     // Urutan SOAL diacak per sesi (poin 9), dan urutan OPSI jawaban tiap
     // soal juga diacak secara independen supaya kunci jawaban tidak bisa
     // dihafal posisinya oleh peserta lain.
-    return shuffle(QUESTIONS).map(function (q) {
+    return shuffle(bank).map(function (q) {
       return {
         no: q.no,
         subject: q.subject,
@@ -130,8 +155,17 @@
     });
   }
 
-  function startExam() {
-    APP.exam.order = buildExamOrder();
+  function startExam(modeId) {
+    const config = EXAM_MODES[modeId];
+    const bank = config.getBank();
+    if (!bank.length) {
+      window.alert("Bank soal untuk mode \"" + config.label + "\" belum tersedia. Hubungi pengelola aplikasi.");
+      return;
+    }
+
+    APP.exam.modeId = modeId;
+    APP.exam.bank = bank;
+    APP.exam.order = buildExamOrder(bank);
     APP.exam.index = 0;
     APP.exam.answers = {};
     APP.exam.remainingSec = EXAM_DURATION_SEC;
@@ -139,7 +173,7 @@
     APP.exam.resultSummary = null;
 
     $("#exam-nama-tag").textContent = APP.user.nama;
-    $("#exam-meta-tag").textContent = APP.user.nim + " \u2022 Kelas " + APP.user.kelas;
+    $("#exam-meta-tag").textContent = APP.user.nim + " \u2022 Kelas " + APP.user.kelas + " \u2022 " + config.label;
 
     showScreen("screen-exam");
     renderExamQuestion();
@@ -186,7 +220,7 @@
     $("#q-options").innerHTML = optionsHtml;
 
     const answeredCount = Object.keys(APP.exam.answers).length;
-    $("#exam-progress-text").textContent = answeredCount + " / " + QUESTIONS.length + " terjawab";
+    $("#exam-progress-text").textContent = answeredCount + " / " + APP.exam.bank.length + " terjawab";
 
     $("#btn-prev").disabled = APP.exam.index === 0;
     $("#btn-next").disabled = APP.exam.index === APP.exam.order.length - 1;
@@ -273,7 +307,7 @@
     if (APP.exam.timerId) clearInterval(APP.exam.timerId);
 
     let benar = 0, salah = 0;
-    QUESTIONS.forEach(function (q) {
+    APP.exam.bank.forEach(function (q) {
       const userAnswer = APP.exam.answers[q.no];
       if (userAnswer && userAnswer === q.kunci) benar += 1;
       else salah += 1;
@@ -296,7 +330,8 @@
 
   function saveAttemptToLeaderboard(summary) {
     if (!window.db) return; // Firebase belum dikonfigurasi - lewati penyimpanan
-    const attemptsRef = window.db.collection("attempts");
+    const collectionName = EXAM_MODES[APP.exam.modeId].collection;
+    const attemptsRef = window.db.collection(collectionName);
     attemptsRef.where("nim", "==", APP.user.nim).get()
       .then(function (snap) {
         const attemptNumber = snap.size + 1;
@@ -321,12 +356,14 @@
   // RESULT & REVIEW
   // ===========================================================
   function renderResult(summary) {
+    const modeLabel = EXAM_MODES[APP.exam.modeId].label;
+    $("#result-title-tag").textContent = "Hasil " + modeLabel;
     $("#score-big").textContent = summary.skor;
     $("#score-benar").textContent = summary.benar;
     $("#score-salah").textContent = summary.salah;
     $("#score-durasi").textContent = formatDurationHuman(summary.durasiDetik) + (summary.auto ? " (waktu habis)" : "");
 
-    const html = QUESTIONS.map(function (q) {
+    const html = APP.exam.bank.map(function (q) {
       const userAnswer = APP.exam.answers[q.no];
       const isCorrect = userAnswer === q.kunci;
       const badgeClass = userAnswer ? (isCorrect ? "correct" : "wrong") : "wrong";
@@ -361,16 +398,35 @@
 
   function initResultScreen() {
     $("#btn-goto-leaderboard").addEventListener("click", function () {
+      APP.leaderboard.modeId = APP.exam.modeId;
       showScreen("screen-leaderboard");
+      renderLeaderboardTabs();
       renderLeaderboard();
     });
     $("#btn-back-home-1").addEventListener("click", backToHome);
   }
 
   // ===========================================================
-  // LEADERBOARD
+  // LEADERBOARD (satu per mode ujian - Simulasi & Prediksi punya
+  // koleksi Firestore terpisah supaya nilainya tidak tercampur,
+  // karena bank soalnya berbeda)
   // ===========================================================
+  function renderLeaderboardTabs() {
+    const container = $("#lb-tabs");
+    if (!container) return;
+    container.innerHTML = Object.keys(EXAM_MODES).map(function (modeId) {
+      const config = EXAM_MODES[modeId];
+      const active = APP.leaderboard.modeId === modeId;
+      return '<button type="button" class="filter-chip' + (active ? " is-active" : "") +
+        '" data-lb-mode="' + modeId + '">' + config.label + '</button>';
+    }).join("");
+  }
+
   function renderLeaderboard() {
+    const modeId = APP.leaderboard.modeId;
+    const config = EXAM_MODES[modeId];
+    $("#leaderboard-title-tag").textContent = "Leaderboard \u2014 " + config.label;
+
     const recapBody = $("#personal-recap-body");
     const lbList = $("#leaderboard-list");
 
@@ -383,10 +439,13 @@
     recapBody.textContent = "Memuat data\u2026";
     lbList.textContent = "Memuat leaderboard\u2026";
 
-    window.db.collection("attempts").where("nim", "==", APP.user.nim).get()
+    const collectionRef = window.db.collection(config.collection);
+
+    collectionRef.where("nim", "==", APP.user.nim).get()
       .then(function (snap) {
+        if (APP.leaderboard.modeId !== modeId) return; // tab sudah berpindah, abaikan hasil basi
         if (snap.empty) {
-          recapBody.innerHTML = "<p>Belum ada riwayat percobaan untuk NIM ini.</p>";
+          recapBody.innerHTML = "<p>Belum ada riwayat percobaan untuk NIM ini pada mode " + escapeHtml(config.label) + ".</p>";
           return;
         }
         let jumlahPercobaan = snap.size;
@@ -406,13 +465,15 @@
       })
       .catch(function (err) {
         console.error(err);
+        if (APP.leaderboard.modeId !== modeId) return;
         recapBody.innerHTML = "<p>Gagal memuat rekap pribadi. Periksa kembali konfigurasi dan aturan keamanan Firestore.</p>";
       });
 
-    window.db.collection("attempts").orderBy("skor", "desc").limit(20).get()
+    collectionRef.orderBy("skor", "desc").limit(20).get()
       .then(function (snap) {
+        if (APP.leaderboard.modeId !== modeId) return;
         if (snap.empty) {
-          lbList.innerHTML = "<p>Belum ada peserta yang menyelesaikan simulasi ujian.</p>";
+          lbList.innerHTML = "<p>Belum ada peserta yang menyelesaikan " + escapeHtml(config.label) + ".</p>";
           return;
         }
         let rank = 0;
@@ -431,20 +492,60 @@
       })
       .catch(function (err) {
         console.error(err);
+        if (APP.leaderboard.modeId !== modeId) return;
         lbList.innerHTML = "<p>Gagal memuat leaderboard. Periksa kembali konfigurasi dan aturan keamanan Firestore.</p>";
       });
   }
 
   function initLeaderboardScreen() {
     $("#btn-back-home-2").addEventListener("click", backToHome);
+    $("#lb-tabs").addEventListener("click", function (e) {
+      const btn = e.target.closest(".filter-chip");
+      if (!btn) return;
+      const modeId = btn.getAttribute("data-lb-mode");
+      if (modeId === APP.leaderboard.modeId) return;
+      APP.leaderboard.modeId = modeId;
+      renderLeaderboardTabs();
+      renderLeaderboard();
+    });
   }
 
   // ===========================================================
   // FLASHCARD MODE
+  // Bisa belajar dari bank "Simulasi Ujian Teori" ATAU "Prediksi
+  // Ujian Remedial" lewat toggle sumber soal - flashcard tidak
+  // bertimer/tidak masuk leaderboard, jadi aman menggabungkan
+  // kedua bank sebagai materi belajar.
   // ===========================================================
+  function currentFlashcardBank() {
+    return EXAM_MODES[APP.flashcard.bankId].getBank();
+  }
+
+  function buildFlashcardSourceToggle() {
+    const container = $("#flashcard-source");
+    if (!container) return;
+    container.innerHTML = Object.keys(EXAM_MODES).map(function (modeId) {
+      const config = EXAM_MODES[modeId];
+      const bank = config.getBank();
+      const disabled = !bank.length;
+      const active = APP.flashcard.bankId === modeId;
+      return '<button type="button" class="filter-chip source-chip' + (active ? " is-active" : "") +
+        '" data-source="' + modeId + '"' + (disabled ? " disabled" : "") + '>' +
+        config.label + (disabled ? " (belum tersedia)" : "") + '</button>';
+    }).join("");
+  }
+
+  function switchFlashcardBank(bankId) {
+    if (!EXAM_MODES[bankId] || !EXAM_MODES[bankId].getBank().length) return;
+    APP.flashcard.bankId = bankId;
+    buildFlashcardSourceToggle();
+    applyFlashcardFilter("Semua");
+  }
+
   function buildFlashcardFilters() {
-    const counts = { "Semua": QUESTIONS.length };
-    SUBJECTS.forEach(function (s) { counts[s] = QUESTIONS.filter(function (q) { return q.subject === s; }).length; });
+    const bank = currentFlashcardBank();
+    const counts = { "Semua": bank.length };
+    SUBJECTS.forEach(function (s) { counts[s] = bank.filter(function (q) { return q.subject === s; }).length; });
 
     const chips = ["Semua"].concat(SUBJECTS);
     $("#flashcard-filters").innerHTML = chips.map(function (name) {
@@ -455,7 +556,8 @@
 
   function applyFlashcardFilter(filterName) {
     APP.flashcard.filter = filterName;
-    const base = filterName === "Semua" ? QUESTIONS : QUESTIONS.filter(function (q) { return q.subject === filterName; });
+    const bank = currentFlashcardBank();
+    const base = filterName === "Semua" ? bank : bank.filter(function (q) { return q.subject === filterName; });
     APP.flashcard.order = shuffle(base);
     APP.flashcard.index = 0;
     $("#flashcard").classList.remove("is-flipped");
@@ -464,7 +566,9 @@
   }
 
   function startFlashcard() {
+    APP.flashcard.bankId = "exam";
     APP.flashcard.filter = "Semua";
+    buildFlashcardSourceToggle();
     buildFlashcardFilters();
     applyFlashcardFilter("Semua");
     showScreen("screen-flashcard");
@@ -503,6 +607,12 @@
   }
 
   function initFlashcardScreen() {
+    $("#flashcard-source").addEventListener("click", function (e) {
+      const chip = e.target.closest(".source-chip");
+      if (!chip || chip.disabled) return;
+      switchFlashcardBank(chip.getAttribute("data-source"));
+    });
+
     $("#flashcard-filters").addEventListener("click", function (e) {
       const chip = e.target.closest(".filter-chip");
       if (!chip) return;
@@ -556,10 +666,30 @@
   // INIT
   // ===========================================================
   function init() {
-    if (!QUESTIONS.length) {
+    const examBank = EXAM_MODES.exam.getBank();
+    if (!examBank.length) {
       document.body.innerHTML = '<p style="padding:40px;font-family:sans-serif;">Bank soal (assets/questions.js) tidak ditemukan atau kosong.</p>';
       return;
     }
+
+    // Mode "Prediksi Ujian Remedial" bersifat opsional secara teknis -
+    // kalau file assets/questions-prediksi.js belum ditambahkan/ke-load,
+    // nonaktifkan tombolnya saja (bukan mematikan seluruh aplikasi),
+    // supaya mode Simulasi Ujian & Flash Card tetap bisa dipakai.
+    const prediksiBank = EXAM_MODES.prediksi.getBank();
+    if (!prediksiBank.length) {
+      const btn = document.querySelector('.mode-option[data-mode="prediksi"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.remove("is-active");
+        const small = btn.querySelector("small");
+        if (small) small.textContent = "Bank soal belum tersedia (assets/questions-prediksi.js)";
+      }
+      const exam0 = document.querySelector('.mode-option[data-mode="exam"]');
+      if (exam0) exam0.classList.add("is-active");
+      APP.mode = "exam";
+    }
+
     initLoginScreen();
     initExamScreen();
     initResultScreen();
